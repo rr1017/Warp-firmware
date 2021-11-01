@@ -74,10 +74,11 @@ devSSD1331init(void)
 	 *
 	 *	Re-configure SPI to be on PTA8 and PTA9 for MOSI and SCK respectively.
 	 */
-	PORT_HAL_SetMuxMode(PORTA_BASE, 8u, kPortMuxAlt3);
+   
+  PORT_HAL_SetMuxMode(PORTA_BASE, 8u, kPortMuxAlt3);
 	PORT_HAL_SetMuxMode(PORTA_BASE, 9u, kPortMuxAlt3);
-
-	enableSPIpins();
+ 
+	warpEnableSPIpins();
 
 	/*
 	 *	Override Warp firmware's use of these pins.
@@ -109,12 +110,12 @@ devSSD1331init(void)
 	writeCommand(0x0);
 	writeCommand(kSSD1331CommandDISPLAYOFFSET);	// 0xA2
 	writeCommand(0x0);
-	writeCommand(kSSD1331CommandNORMALDISPLAY);	// 0xA4
+	writeCommand(kSSD1331CommandNORMALDISPLAY);	// 0xA4      CONSIDER CHANGING TO kSSD1331CommandDISPLAYALLON
 	writeCommand(kSSD1331CommandSETMULTIPLEX);	// 0xA8
 	writeCommand(0x3F);				// 0x3F 1/64 duty
 	writeCommand(kSSD1331CommandSETMASTER);		// 0xAD
 	writeCommand(0x8E);
-	writeCommand(kSSD1331CommandPOWERMODE);		// 0xB0
+	writeCommand(kSSD1331CommandPOWERMODE);		// 0xB0        CONSIDER COMMENTING THIS OUT TO MAKE POWER CONSUPTION MAXIMUM
 	writeCommand(0x0B);
 	writeCommand(kSSD1331CommandPRECHARGE);		// 0xB1
 	writeCommand(0x31);
@@ -139,30 +140,32 @@ devSSD1331init(void)
 	writeCommand(kSSD1331CommandCONTRASTC);		// 0x83
 	writeCommand(0x7D);
 	writeCommand(kSSD1331CommandDISPLAYON);		// Turn on oled panel
-
+  SEGGER_RTT_WriteString(0, "\r\n\tDone with initialisation sequence...\n");
+  
 	/*
 	 *	To use fill commands, you will have to issue a command to the display to enable them. See the manual.
 	 */
-	writeCommand(kSSD1331CommandFILL);
+	writeCommand(kSSD1331CommandFILL); // 0x26
 	writeCommand(0x01);
-
+  SEGGER_RTT_WriteString(0, "\r\n\tDone with enabling fill...\n");
+  
 	/*
 	 *	Clear Screen
 	 */
-	writeCommand(kSSD1331CommandCLEAR);
+	writeCommand(kSSD1331CommandCLEAR); // 0x25
 	writeCommand(0x00);
 	writeCommand(0x00);
 	writeCommand(0x5F);
 	writeCommand(0x3F);
-
+  SEGGER_RTT_WriteString(0, "\r\n\tDone with screen clear...\n");
 
 
 	/*
 	 *	Any post-initialization drawing commands go here.
 	 */
-	//...
+	//...  
 
-
+  SEGGER_RTT_WriteString(0, "\r\n\tDone filling the entire screen with the brightest shade of green...\n");
 
 	return 0;
 }
