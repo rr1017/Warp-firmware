@@ -87,6 +87,7 @@
 #	include "devMMA8451Q.h"
 #endif
 
+#include "devSSD1331.h"
 
 #define WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 //#define WARP_BUILD_BOOT_TO_CSVSTREAM
@@ -1354,6 +1355,8 @@ main(void)
 	 *	Notreached
 	 */
 #endif
+
+devSSD1331init();
 
 	while (1)
 	{

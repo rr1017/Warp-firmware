@@ -22,11 +22,11 @@ volatile uint8_t	payloadBytes[1];
  */
 enum
 {
-	kSSD1331PinMOSI		= GPIO_MAKE_PIN(HW_GPIOA, 7),
-	kSSD1331PinSCK		= GPIO_MAKE_PIN(HW_GPIOB, 0),
-	kSSD1331PinCSn		= GPIO_MAKE_PIN(HW_GPIOB, 10),
-	kSSD1331PinDC		= GPIO_MAKE_PIN(HW_GPIOA, 5),
-	kSSD1331PinRST		= GPIO_MAKE_PIN(HW_GPIOB, 11),
+	kSSD1331PinMOSI		= GPIO_MAKE_PIN(HW_GPIOA, 8),
+	kSSD1331PinSCK		= GPIO_MAKE_PIN(HW_GPIOA, 9),
+	kSSD1331PinCSn		= GPIO_MAKE_PIN(HW_GPIOB, 11),
+	kSSD1331PinDC		= GPIO_MAKE_PIN(HW_GPIOA, 12),
+	kSSD1331PinRST		= GPIO_MAKE_PIN(HW_GPIOB, 0),
 };
 
 static int
@@ -75,8 +75,8 @@ devSSD1331init(void)
 	 *	Re-configure SPI to be on PTA8 and PTA9 for MOSI and SCK respectively.
 	 */
    
-  PORT_HAL_SetMuxMode(PORTA_BASE, 7u, kPortMuxAlt3);
-	PORT_HAL_SetMuxMode(PORTA_BASE, 0u, kPortMuxAlt3);
+  PORT_HAL_SetMuxMode(PORTA_BASE, 8u, kPortMuxAlt3);
+	PORT_HAL_SetMuxMode(PORTA_BASE, 9u, kPortMuxAlt3);
  
 	warpEnableSPIpins();
 
@@ -85,9 +85,9 @@ devSSD1331init(void)
 	 *
 	 *	Reconfigure to use as GPIO.
 	 */
-	PORT_HAL_SetMuxMode(PORTB_BASE, 10u, kPortMuxAsGpio);
-	PORT_HAL_SetMuxMode(PORTA_BASE, 5u, kPortMuxAsGpio);
 	PORT_HAL_SetMuxMode(PORTB_BASE, 11u, kPortMuxAsGpio);
+	PORT_HAL_SetMuxMode(PORTA_BASE, 12u, kPortMuxAsGpio);
+	PORT_HAL_SetMuxMode(PORTB_BASE, 0u, kPortMuxAsGpio);
 
 
 	/*
@@ -110,12 +110,12 @@ devSSD1331init(void)
 	writeCommand(0x0);
 	writeCommand(kSSD1331CommandDISPLAYOFFSET);	// 0xA2
 	writeCommand(0x0);
-	writeCommand(kSSD1331CommandNORMALDISPLAY);	// 0xA4      CONSIDER CHANGING TO kSSD1331CommandDISPLAYALLON
+	writeCommand(kSSD1331CommandNORMALDISPLAY);	// 0xA4
 	writeCommand(kSSD1331CommandSETMULTIPLEX);	// 0xA8
 	writeCommand(0x3F);				// 0x3F 1/64 duty
 	writeCommand(kSSD1331CommandSETMASTER);		// 0xAD
 	writeCommand(0x8E);
-	writeCommand(kSSD1331CommandPOWERMODE);		// 0xB0        CONSIDER COMMENTING THIS OUT TO MAKE POWER CONSUPTION MAXIMUM
+	writeCommand(kSSD1331CommandPOWERMODE);		// 0xB0
 	writeCommand(0x0B);
 	writeCommand(kSSD1331CommandPRECHARGE);		// 0xB1
 	writeCommand(0x31);
@@ -125,21 +125,21 @@ devSSD1331init(void)
 	writeCommand(0x64);
 	writeCommand(kSSD1331CommandPRECHARGEB);	// 0x8B
 	writeCommand(0x78);
-	writeCommand(kSSD1331CommandPRECHARGEA);	// 0x8C
+	writeCommand(kSSD1331CommandPRECHARGEC);	// 0x8C
 	writeCommand(0x64);
 	writeCommand(kSSD1331CommandPRECHARGELEVEL);	// 0xBB
 	writeCommand(0x3A);
 	writeCommand(kSSD1331CommandVCOMH);		// 0xBE
 	writeCommand(0x3E);
-	writeCommand(kSSD1331CommandMASTERCURRENT);	// 0x87
+  writeCommand(kSSD1331CommandMASTERCURRENT);	// 0x87
 	writeCommand(0x06);
 	writeCommand(kSSD1331CommandCONTRASTA);		// 0x81
 	writeCommand(0x91);
 	writeCommand(kSSD1331CommandCONTRASTB);		// 0x82
-	writeCommand(0x50);
+  writeCommand(0x50);
 	writeCommand(kSSD1331CommandCONTRASTC);		// 0x83
 	writeCommand(0x7D);
-	writeCommand(kSSD1331CommandDISPLAYON);		// Turn on oled panel
+  writeCommand(kSSD1331CommandDISPLAYON);		// Turn on oled panel
   SEGGER_RTT_WriteString(0, "\r\n\tDone with initialisation sequence...\n");
   
 	/*
@@ -149,7 +149,7 @@ devSSD1331init(void)
 	writeCommand(0x01);
   SEGGER_RTT_WriteString(0, "\r\n\tDone with enabling fill...\n");
   
-	/*
+ 	/*
 	 *	Clear Screen
 	 */
 	writeCommand(kSSD1331CommandCLEAR); // 0x25
@@ -163,7 +163,19 @@ devSSD1331init(void)
 	/*
 	 *	Any post-initialization drawing commands go here.
 	 */
-	//...  
+	//...
+  
+  writeCommand(0x22);	//draw rectangle command
+	writeCommand(0x00);	//column address start
+	writeCommand(0x00);	//row address start
+	writeCommand(0x5F);	//column address end
+	writeCommand(0x3F);	//row address end	
+	writeCommand(0x00);	//colour C (RED) of outline (max FF)
+	writeCommand(0x3F);	//colour B (GREEN) of outline (max 3F)
+	writeCommand(0x00);	//colour A (BLUE) of outline (max FF)
+	writeCommand(0x00);	//colour C of fill
+	writeCommand(0x3F);	//colour B of fill
+	writeCommand(0x00);	//colour A of fill
 
   SEGGER_RTT_WriteString(0, "\r\n\tDone filling the entire screen with the brightest shade of green...\n");
 
