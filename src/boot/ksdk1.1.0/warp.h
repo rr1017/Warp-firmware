@@ -68,6 +68,7 @@ typedef enum
 
 typedef enum
 {
+  kWarpSensorINA219,
 	kWarpSensorADXL362,
 	kWarpSensorMMA8451Q,
 	kWarpSensorBME680,

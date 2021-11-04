@@ -101,6 +101,8 @@
 	#define		WARP_BUILD_ENABLE_DEVSI4705		0
 	#define		WARP_BUILD_ENABLE_DEVSI7021		0
 	#define		WARP_BUILD_ENABLE_DEVTCS34725		0
+ #define		WARP_BUILD_ENABLE_DEVSSD1331		1
+ #define		WARP_BUILD_ENABLE_DEVINA219		1
 #else
 	/*
 	 *	Otherwise: Edit these to set which code paths are activated in the firmware compilation
@@ -161,6 +163,7 @@ typedef enum
 	 *	Voltages
 	 */
 	kWarpDefaultSupplyVoltageMillivolts			= 1800,
+ kWarpDefaultSupplyVoltageMillivoltsINA219 = 1800,
 	kWarpDefaultSupplyVoltageMillivoltsBGX			= 3300,
 	kWarpDefaultSupplyVoltageMillivoltsBMX055accel		= 1800,
 	kWarpDefaultSupplyVoltageMillivoltsBMX055gyro		= 1800,
