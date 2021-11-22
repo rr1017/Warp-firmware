@@ -61,7 +61,6 @@
 #include "errstrs.h"
 #include "gpio_pins.h"
 #include "SEGGER_RTT.h"
-#include "devSSD1331.h"
 
 #define							kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
 #define							kWarpConstantStringErrorInvalidVoltage	"\rInvalid supply voltage [%d] mV!"
@@ -71,6 +70,10 @@
 #if (WARP_BUILD_ENABLE_DEVINA219)
 	#include "devINA219.h"
 	volatile WarpI2CDeviceState			deviceINA219State;
+#endif
+
+#if (WARP_BUILD_ENABLE_DEVSSD1331)
+  #include "devSSD1331.h"
 #endif
 
 #if (WARP_BUILD_ENABLE_DEVADXL362)
@@ -2031,8 +2034,10 @@ devSSD1331init();
 #endif
 
 #if (WARP_BUILD_ENABLE_DEVINA219)
-  printSensorDataINA219(10);
+  printSensorDataINA219(1000);
 #endif
+
+falldetectorMMA8451Q();
 
 	while (1)
 	{

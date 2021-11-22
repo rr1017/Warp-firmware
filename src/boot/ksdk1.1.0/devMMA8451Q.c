@@ -306,3 +306,83 @@ printSensorDataMMA8451Q(bool hexModeFlag)
 		}
 	}
 }
+
+// NEW FUNCTION THAT RETURNS ACCELERATION INFORMATION FOR X, Y AND Z DIMENSIONS IN DECIMALS
+void
+falldetectorMMA8451Q()
+{
+	uint16_t	readSensorRegisterValueLSB;
+	uint16_t	readSensorRegisterValueMSB;
+	int16_t		readSensorRegisterValueCombined;
+  int16_t   accData[3] = {0}, oldaccData[3] = {0}, velData[3] = {0};
+  int16_t   vel = 0;
+  int i=0,acc=0;
+	WarpStatus	i2cReadStatus;
+ 
+  // Configure sensor
+  configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */0x01/* Normal read 8bit, 800Hz, normal, active mode */);
+
+
+	warpScaleSupplyVoltage(deviceMMA8451QState.operatingVoltageMillivolts);
+
+	/*
+	 *	Falls can be detected by measuring the average velocity information
+   *  from x, y and z acceleration information.
+	 */
+   
+  while(acc<1000){
+   
+    // X acceleration
+  	i2cReadStatus = readSensorRegisterMMA8451Q(kWarpSensorOutputRegisterMMA8451QOUT_X_MSB, 2 /* numberOfBytes */);
+  	readSensorRegisterValueMSB = deviceMMA8451QState.i2cBuffer[0];
+  	readSensorRegisterValueLSB = deviceMMA8451QState.i2cBuffer[1];
+  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2);
+  
+  	/*
+  	 *	Sign extend the 14-bit value based on knowledge that upper 2 bit are 0:
+  	 */
+  	accData[0] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13);
+  
+  
+    // Y acceleration
+  	i2cReadStatus = readSensorRegisterMMA8451Q(kWarpSensorOutputRegisterMMA8451QOUT_Y_MSB, 2 /* numberOfBytes */);
+  	readSensorRegisterValueMSB = deviceMMA8451QState.i2cBuffer[0];
+  	readSensorRegisterValueLSB = deviceMMA8451QState.i2cBuffer[1];
+  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2);
+  
+  	/*
+  	 *	Sign extend the 14-bit value based on knowledge that upper 2 bit are 0:
+  	 */
+  	accData[1] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13);
+   
+   
+    // Z acceleration
+  	i2cReadStatus = readSensorRegisterMMA8451Q(kWarpSensorOutputRegisterMMA8451QOUT_Z_MSB, 2 /* numberOfBytes */);
+  	readSensorRegisterValueMSB = deviceMMA8451QState.i2cBuffer[0];
+  	readSensorRegisterValueLSB = deviceMMA8451QState.i2cBuffer[1];
+  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2);
+  
+  	/*
+  	 *	Sign extend the 14-bit value based on knowledge that upper 2 bit are 0:
+  	 */
+  	accData[2] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13);
+   
+   
+    // Calculate velocity from old and current acceleration measurements
+    for (i=0;i<3;i++){
+      velData[i] = accData[i]-oldaccData[i];
+      oldaccData[i] = accData[i];
+    }  
+    
+    // Calculate overall velocity magnitude as sqrt(velx^2+vely^2+velz^2)
+    vel = (velData[0]*velData[0]+velData[1]*velData[1]+velData[2]*velData[2]);
+    
+    if (vel<0){
+      vel = -vel;
+    }
+    
+    warpPrint("%d\n", vel);
+    
+    acc = acc+1;
+  }
+}

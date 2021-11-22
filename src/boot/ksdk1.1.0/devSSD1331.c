@@ -26,7 +26,7 @@ enum
 	kSSD1331PinSCK		= GPIO_MAKE_PIN(HW_GPIOA, 9),
 	kSSD1331PinCSn		= GPIO_MAKE_PIN(HW_GPIOB, 11),
 	kSSD1331PinDC		= GPIO_MAKE_PIN(HW_GPIOA, 12),
-	kSSD1331PinRST		= GPIO_MAKE_PIN(HW_GPIOB, 0),
+	kSSD1331PinRST		= GPIO_MAKE_PIN(HW_GPIOB, 10),
 };
 
 static int
@@ -87,7 +87,7 @@ devSSD1331init(void)
 	 */
 	PORT_HAL_SetMuxMode(PORTB_BASE, 11u, kPortMuxAsGpio);
 	PORT_HAL_SetMuxMode(PORTA_BASE, 12u, kPortMuxAsGpio);
-	PORT_HAL_SetMuxMode(PORTB_BASE, 0u, kPortMuxAsGpio);
+	PORT_HAL_SetMuxMode(PORTB_BASE, 10u, kPortMuxAsGpio);
 
 
 	/*
@@ -169,12 +169,12 @@ devSSD1331init(void)
 	writeCommand(0x00);	//column address start
 	writeCommand(0x00);	//row address start
 	writeCommand(0x5F);	//column address end
-	writeCommand(0x3F);	//row address end	
+	writeCommand(0xFF);	//row address end	
 	writeCommand(0x00);	//colour C (RED) of outline (max FF)
-	writeCommand(0x3F);	//colour B (GREEN) of outline (max 3F)
+	writeCommand(0xFF);	//colour B (GREEN) of outline (max 3F)
 	writeCommand(0x00);	//colour A (BLUE) of outline (max FF)
 	writeCommand(0x00);	//colour C of fill
-	writeCommand(0x3F);	//colour B of fill
+	writeCommand(0xFF);	//colour B of fill
 	writeCommand(0x00);	//colour A of fill
 
   SEGGER_RTT_WriteString(0, "\r\n\tDone filling the entire screen with the brightest shade of green...\n");
