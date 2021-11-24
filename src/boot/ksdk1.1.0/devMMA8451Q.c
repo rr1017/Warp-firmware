@@ -36,6 +36,7 @@
 	POSSIBILITY OF SUCH DAMAGE.
 */
 #include <stdlib.h>
+#include <math.h>
 
 /*
  *	config.h needs to come first
@@ -128,9 +129,9 @@ writeSensorRegisterMMA8451Q(uint8_t deviceRegister, uint8_t payload)
 }
 
 WarpStatus
-configureSensorMMA8451Q(uint8_t payloadF_SETUP, uint8_t payloadCTRL_REG1)
+configureSensorMMA8451Q(uint8_t payloadF_SETUP, uint8_t payloadCTRL_REG1, uint8_t payloadXYZ_DATA_CFG)
 {
-	WarpStatus	i2cWriteStatus1, i2cWriteStatus2;
+	WarpStatus	i2cWriteStatus1, i2cWriteStatus2, i2cWriteStatus3;
 
 
 	warpScaleSupplyVoltage(deviceMMA8451QState.operatingVoltageMillivolts);
@@ -142,8 +143,12 @@ configureSensorMMA8451Q(uint8_t payloadF_SETUP, uint8_t payloadCTRL_REG1)
 	i2cWriteStatus2 = writeSensorRegisterMMA8451Q(kWarpSensorConfigurationRegisterMMA8451QCTRL_REG1 /* register address CTRL_REG1 */,
 							payloadCTRL_REG1 /* payload */
 							);
+                                  
+  i2cWriteStatus3 = writeSensorRegisterMMA8451Q(0x0E /* register address XYZ_DATA_CFG */,
+							payloadXYZ_DATA_CFG /* payload */
+							);
 
-	return (i2cWriteStatus1 | i2cWriteStatus2);
+	return (i2cWriteStatus1 | i2cWriteStatus2 | i2cWriteStatus3);
 }
 
 WarpStatus
@@ -307,20 +312,22 @@ printSensorDataMMA8451Q(bool hexModeFlag)
 	}
 }
 
-// NEW FUNCTION THAT RETURNS ACCELERATION INFORMATION FOR X, Y AND Z DIMENSIONS IN DECIMALS
+// NEW FUNCTION THAT DETECTS FALLS
 void
-falldetectorMMA8451Q()
+falldetectorMMA8451Q(void)
 {
 	uint16_t	readSensorRegisterValueLSB;
 	uint16_t	readSensorRegisterValueMSB;
 	int16_t		readSensorRegisterValueCombined;
-  int16_t   accData[3] = {0}, oldaccData[3] = {0}, velData[3] = {0};
-  int16_t   vel = 0;
-  int i=0,acc=0;
+  int16_t   accData[3] = {0}, oldaccData[3] = {0};
+  uint16_t  velData[3] = {0};
+  uint16_t   avg_data[20] = {0};
+  uint16_t   vel = 0, avg=0;
+  int i=0,acc=0,elem=0;
 	WarpStatus	i2cReadStatus;
  
   // Configure sensor
-  configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */0x01/* Normal read 8bit, 800Hz, normal, active mode */);
+  configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */0x01,/* Normal read 8bit, 800Hz, normal, active mode */0x11/* Set full scale to -4g to 3.99g range and high-pass filter*/);
 
 
 	warpScaleSupplyVoltage(deviceMMA8451QState.operatingVoltageMillivolts);
@@ -330,7 +337,7 @@ falldetectorMMA8451Q()
    *  from x, y and z acceleration information.
 	 */
    
-  while(acc<1000){
+  while(1){
    
     // X acceleration
   	i2cReadStatus = readSensorRegisterMMA8451Q(kWarpSensorOutputRegisterMMA8451QOUT_X_MSB, 2 /* numberOfBytes */);
@@ -367,22 +374,40 @@ falldetectorMMA8451Q()
   	 */
   	accData[2] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13);
    
-   
-    // Calculate velocity from old and current acceleration measurements
+    // Calculate velocity from old and current acceleration measurements and make values strictly positive and unsigned (to increase magnitude value range)
     for (i=0;i<3;i++){
-      velData[i] = accData[i]-oldaccData[i];
+      velData[i] = (uint16_t)abs(accData[i]-oldaccData[i]);
       oldaccData[i] = accData[i];
     }  
     
-    // Calculate overall velocity magnitude as sqrt(velx^2+vely^2+velz^2)
-    vel = (velData[0]*velData[0]+velData[1]*velData[1]+velData[2]*velData[2]);
+    // Store 20 values to perform moving average (smoothing)
+    avg_data[elem] = floor(sqrt((velData[2]*velData[2])));
     
-    if (vel<0){
-      vel = -vel;
+    if (elem==19){
+      for (i=0;i<20;i++){
+        avg = avg + avg_data[i];
+      } 
+      avg = floor(avg/20);
+      warpPrint("%d\n",avg);
+      if (avg>2000){ // define threshold
+        warpPrint("FALL!\n");
+        // Define RED LED pin
+        enum{
+          pin = GPIO_MAKE_PIN(HW_GPIOB, 10),
+        };
+        PORT_HAL_SetMuxMode(PORTB_BASE, 10u, kPortMuxAsGpio);
+        while(1){
+     	    GPIO_DRV_SetPinOutput(pin);
+    	    OSA_TimeDelay(200);
+    	    GPIO_DRV_ClearPinOutput(pin);
+   	    OSA_TimeDelay(200);
+        }
+      }
+      elem = 0;
+      avg = 0;     
     }
     
-    warpPrint("%d\n", vel);
-    
-    acc = acc+1;
+//    acc = acc+1;
+    elem = elem+1;
   }
 }
