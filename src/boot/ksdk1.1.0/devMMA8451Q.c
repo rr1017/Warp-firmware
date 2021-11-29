@@ -129,9 +129,9 @@ writeSensorRegisterMMA8451Q(uint8_t deviceRegister, uint8_t payload)
 }
 
 WarpStatus
-configureSensorMMA8451Q(uint8_t payloadF_SETUP, uint8_t payloadCTRL_REG1, uint8_t payloadXYZ_DATA_CFG)
+configureSensorMMA8451Q(uint8_t payloadF_SETUP, uint8_t payloadCTRL_REG1, uint8_t payloadXYZ_DATA_CFG, uint8_t payloadCTRL_REG2)
 {
-	WarpStatus	i2cWriteStatus1, i2cWriteStatus2, i2cWriteStatus3;
+	WarpStatus	i2cWriteStatus1, i2cWriteStatus2, i2cWriteStatus3, i2cWriteStatus4;
 
 
 	warpScaleSupplyVoltage(deviceMMA8451QState.operatingVoltageMillivolts);
@@ -147,8 +147,12 @@ configureSensorMMA8451Q(uint8_t payloadF_SETUP, uint8_t payloadCTRL_REG1, uint8_
   i2cWriteStatus3 = writeSensorRegisterMMA8451Q(0x0E /* register address XYZ_DATA_CFG */,
 							payloadXYZ_DATA_CFG /* payload */
 							);
+                                     
+  i2cWriteStatus4 = writeSensorRegisterMMA8451Q(0x2B /* register address CTRL_REG2 */,
+							payloadCTRL_REG2 /* payload */
+							);
 
-	return (i2cWriteStatus1 | i2cWriteStatus2 | i2cWriteStatus3);
+	return (i2cWriteStatus1 | i2cWriteStatus2 | i2cWriteStatus3 | i2cWriteStatus4);
 }
 
 WarpStatus
@@ -327,8 +331,7 @@ falldetectorMMA8451Q(void)
 	WarpStatus	i2cReadStatus;
  
   // Configure sensor
-  configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */0x01,/* Normal read 8bit, 800Hz, normal, active mode */0x11/* Set full scale to -4g to 3.99g range and high-pass filter*/);
-
+  configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */0x39,/* Normal read 8bit, data rate 1.56Hz, normal, active mode */0x11,/* Set full scale to -4g to 3.99g range and high-pass filter*/0x01/*Define "low power and low noise" mode - current 8uA*/);
 
 	warpScaleSupplyVoltage(deviceMMA8451QState.operatingVoltageMillivolts);
 
@@ -381,7 +384,7 @@ falldetectorMMA8451Q(void)
     }  
     
     // Store 20 values to perform moving average (smoothing)
-    avg_data[elem] = floor(sqrt((velData[2]*velData[2])));
+    avg_data[elem] = floor(sqrt((velData[0]*velData[0]+velData[1]*velData[1]+velData[2]*velData[2])));
     
     if (elem==19){
       for (i=0;i<20;i++){
