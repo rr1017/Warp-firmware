@@ -1,6 +1,5 @@
 # Fall detector project for 4B25
-Ruben Ruiz-Mateos Serrano
-CRSid = rr632
+Ruben Ruiz-Mateos Serrano, CRSid = rr632
 ---
 
 *This repository is based on the `Warp-firmware` repository provided by Prof. Stanley-Marbell.* 
