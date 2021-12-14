@@ -2,7 +2,7 @@
 Ruben Ruiz-Mateos Serrano, CRSid = rr632, Hughes Hall
 ---
 
-*This repository is based on the `Warp-firmware` repository provided by Prof. Stanley-Marbell.* 
+*This repository is based on the `Warp-firmware` repository provided by Prof. Stanley-Marbell [1].* 
 
 The code presented in this repository implements the firmware required to generate an embedded system for fall recognition.
 
@@ -16,3 +16,5 @@ Since the file `script.c` is being used to boot the `Warp-firmware`, the files `
 	-  The function `falldetectorMMA8451Q` has been created to read x, y and z axis acceleration data from the FRDMKL03Z board in-built MMA8451Q three-axis accelerometer, convert it into x, y and z velocity, average it over 20 samples, obtain the magnitude of the velocity and shine an intermittent red LED light when the velocity magnitude exceeds 30 m/s (as this high velocity is only achieved during a fall). Furthermore, the function forces the device to shine an intermittent green light if the configuration of the MMA8451Q accelerometer is not successful.  
 
 *Notes: - the `.gitignore` file has been modified to allow the storage of all files generated during the build process. This has been done simply to keep record of different s-record files. - further descriptions of commands are given inside the various files mentioned above.*
+
+[1] Phillip Stanley-Marbell and Martin Rinard. “Warp: A Hardware Platform for Efficient Multi-Modal Sensing with Adaptive Approximation”. IEEE Micro, Volume 40 , Issue 1 , Jan.-Feb. 2020.
