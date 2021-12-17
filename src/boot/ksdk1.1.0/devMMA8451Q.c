@@ -37,6 +37,7 @@
 */
 #include <stdlib.h>
 #include <math.h>
+//#include <string.h>
 
 /*
  *	config.h needs to come first
@@ -320,97 +321,107 @@ printSensorDataMMA8451Q(bool hexModeFlag)
 void
 falldetectorMMA8451Q(void)
 {
-	uint16_t	readSensorRegisterValueLSB;
-	uint16_t	readSensorRegisterValueMSB;
-	int16_t		readSensorRegisterValueCombined;
+	uint16_t	readSensorRegisterValueLSB = 0;
+	uint16_t	readSensorRegisterValueMSB = 0;
+	int16_t		readSensorRegisterValueCombined = 0;
   int16_t   accData[3] = {0}, oldaccData[3] = {0};
-  uint16_t  velData[3] = {0};
+  uint16_t  diffData[3] = {0};
   uint16_t   avg_data[20] = {0};
-  uint16_t   vel = 0, avg=0;
-  int i=0,acc=0,elem=0;
-	WarpStatus	i2cReadStatus;
+  uint16_t   avg=0;
+  int i=0,elem=0;
+	WarpStatus	i2cReadStatus, check;
  
   // Configure sensor
-  configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */0x39,/* Normal read 8bit, data rate 1.56Hz, active mode */0x11,/* Set full scale to -4g to 3.99g range and high-pass filter*/0x01/*Define "low power and low noise" mode - current 8uA*/);
+  check = configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */0x39,/* Normal read 14-bit, data rate 1.56Hz, active mode */0x11,/* Set full scale to -4g to 3.99g range and high-pass filter fc=0.5Hz*/0x01/*Define "low power and low noise" mode - current 8uA*/);
   
 	warpScaleSupplyVoltage(deviceMMA8451QState.operatingVoltageMillivolts);
 
 	/*
-	 *	Falls can be detected by measuring the average velocity information
+	 *	Falls can be detected by measuring the average difference in acceleration
    *  from x, y and z acceleration information.
 	 */
    
-  while(1){
+  while(check == kWarpStatusOK){  // make sure to proceed only if cofiguration is successful 
    
     // X acceleration
   	i2cReadStatus = readSensorRegisterMMA8451Q(kWarpSensorOutputRegisterMMA8451QOUT_X_MSB, 2 /* numberOfBytes */);
   	readSensorRegisterValueMSB = deviceMMA8451QState.i2cBuffer[0];
   	readSensorRegisterValueLSB = deviceMMA8451QState.i2cBuffer[1];
-  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2);
+  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2); // push MSB (16) 6 to the left and LSB (16) 2 to the right, OR them to get 14-bit data (2 most left bits are zero)
   
   	/*
   	 *	Sign extend the 14-bit value based on knowledge that upper 2 bit are 0:
   	 */
-  	accData[0] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13);
+  	accData[0] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13); // ^ equivalent to XOR
   
   
     // Y acceleration
   	i2cReadStatus = readSensorRegisterMMA8451Q(kWarpSensorOutputRegisterMMA8451QOUT_Y_MSB, 2 /* numberOfBytes */);
   	readSensorRegisterValueMSB = deviceMMA8451QState.i2cBuffer[0];
   	readSensorRegisterValueLSB = deviceMMA8451QState.i2cBuffer[1];
-  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2);
+  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2); // push MSB (16) 6 to the left and LSB (16) 2 to the right, OR them to get 14-bit data (2 most left bits are zero)
   
   	/*
   	 *	Sign extend the 14-bit value based on knowledge that upper 2 bit are 0:
   	 */
-  	accData[1] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13);
+  	accData[1] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13); // ^ equivalent to XOR
    
    
     // Z acceleration
   	i2cReadStatus = readSensorRegisterMMA8451Q(kWarpSensorOutputRegisterMMA8451QOUT_Z_MSB, 2 /* numberOfBytes */);
   	readSensorRegisterValueMSB = deviceMMA8451QState.i2cBuffer[0];
   	readSensorRegisterValueLSB = deviceMMA8451QState.i2cBuffer[1];
-  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2);
+  	readSensorRegisterValueCombined = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2); // push MSB (16) 6 to the left and LSB (16) 2 to the right, OR them to get 14-bit data (2 most left bits are zero)
   
   	/*
   	 *	Sign extend the 14-bit value based on knowledge that upper 2 bit are 0:
   	 */
-  	accData[2] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13);
+  	accData[2] = (readSensorRegisterValueCombined ^ (1 << 13)) - (1 << 13); // ^ equivalent to XOR
    
-    // Calculate velocity from old and current acceleration measurements and make values strictly positive and unsigned (to increase magnitude value range)
+    // Calculate difference in acceleration from old and current acceleration measurements and make values strictly positive and unsigned (to increase magnitude value range)
     for (i=0;i<3;i++){
-      velData[i] = (uint16_t)abs(accData[i]-oldaccData[i]);
+      diffData[i] = (uint16_t)abs(accData[i]-oldaccData[i]);
       oldaccData[i] = accData[i];
     }  
     
-    // Store 20 values to perform moving average (smoothing)
-    avg_data[elem] = floor(sqrt((velData[0]*velData[0]+velData[1]*velData[1]+velData[2]*velData[2])));
+    // Store 20 values to perform moving average (smoothing) of jerk magnitude in x, y and z directions
+    avg_data[elem] = round(sqrt((diffData[0]*diffData[0]+diffData[1]*diffData[1]+diffData[2]*diffData[2])));
     
     if (elem==19){
-      for (i=0;i<20;i++){
+      for (i=0;i<20;i++){  // calculate mean
         avg = avg + avg_data[i];
       } 
-      avg = floor(avg/20);
+      avg = round(avg/20);
       warpPrint("%d\n",avg);
-      if (avg>2000){ // define threshold 30m/s
+      if (avg>2000){ // define threshold 1g -> conversion Delta_a = 3.995g/(2^13-1)*avg
         warpPrint("FALL!\n");
         // Define RED LED pin
         enum{
           pin = GPIO_MAKE_PIN(HW_GPIOB, 10),
         };
         PORT_HAL_SetMuxMode(PORTB_BASE, 10u, kPortMuxAsGpio);
-        while(1){
+        while(1){  // intermittent light
      	    GPIO_DRV_SetPinOutput(pin);
     	    OSA_TimeDelay(200);
     	    GPIO_DRV_ClearPinOutput(pin);
-   	    OSA_TimeDelay(200);
+   	      OSA_TimeDelay(200);
         }
       }
       elem = 0;
-      avg = 0;     
+      avg = 0;   
+//      memset(avg_data, 0, sizeof avg_data); // clear entire array - should not be necessary, values will be overwritten 
     }
-    
-//    acc = acc+1;
     elem = elem+1;
+  }
+  // Define GREEN LED pin
+  enum{
+    pin = GPIO_MAKE_PIN(HW_GPIOB, 11),
+  };
+  PORT_HAL_SetMuxMode(PORTB_BASE, 11u, kPortMuxAsGpio);
+  while(1){  // intermittent light
+ 	    GPIO_DRV_SetPinOutput(pin);
+ 	    OSA_TimeDelay(200);
+ 	    GPIO_DRV_ClearPinOutput(pin);
+ 	    OSA_TimeDelay(200);
   }
 }

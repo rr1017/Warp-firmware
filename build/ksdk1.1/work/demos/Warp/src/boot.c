@@ -56,7 +56,7 @@
 #include "fsl_mcglite_hal.h"
 #include "fsl_port_hal.h"
 #include "fsl_lpuart_driver.h"
-//#include "glaux.h"
+#include "glaux.h"
 #include "warp.h"
 #include "errstrs.h"
 #include "gpio_pins.h"
@@ -2814,8 +2814,8 @@ printAllSensors(bool printHeadersAndCalibration, bool hexModeFlag, int menuDelay
 	#endif
 	#if (WARP_BUILD_ENABLE_DEVMMA8451Q)
 	numberOfConfigErrors += configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */
-					0x01/* Normal read 8bit, 800Hz, normal, active mode */
-					);
+					0x01,/* Normal read 8bit, 800Hz, normal, active mode */
+					0x00,0x00);
 	#endif
 	#if (WARP_BUILD_ENABLE_DEVMAG3110)
 	numberOfConfigErrors += configureSensorMAG3110(	0x00,/*	Payload: DR 000, OS 00, 80Hz, ADC 1280, Full 16bit, standby mode to set up register*/

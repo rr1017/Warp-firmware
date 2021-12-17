@@ -212,12 +212,10 @@ char							gWarpPrintBuffer[kWarpDefaultPrintBufferSizeBytes];
 uint8_t							gWarpSpiCommonSourceBuffer[kWarpMemoryCommonSpiBufferBytes];
 uint8_t							gWarpSpiCommonSinkBuffer[kWarpMemoryCommonSpiBufferBytes];
 
-static void						sleepUntilReset(void);
 static void						lowPowerPinStates(void);
 static void						disableTPS62740(void);
 static void						enableTPS62740(uint16_t voltageMillivolts);
 static void						setTPS62740CommonControlLines(uint16_t voltageMillivolts);
-static void						dumpProcessorState(void);
 
 void							warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState);
 
@@ -345,31 +343,6 @@ callback0(power_manager_notify_struct_t *  notify, power_manager_callback_data_t
 
 	return status;
 }
-/*
- *	Derived from KSDK power_manager_demo.c <<END
- */
-
-
-
-void
-sleepUntilReset(void)
-{
-	while (1)
-	{
-		#if (WARP_BUILD_ENABLE_DEVSI4705)
-			GPIO_DRV_SetPinOutput(kWarpPinSI4705_nRST);
-		#endif
-
-		warpLowPowerSecondsSleep(1, false /* forceAllPinsIntoLowPowerState */);
-
-		#if (WARP_BUILD_ENABLE_DEVSI4705)
-			GPIO_DRV_ClearPinOutput(kWarpPinSI4705_nRST);
-		#endif
-
-		warpLowPowerSecondsSleep(60, true /* forceAllPinsIntoLowPowerState */);
-	}
-}
-
 
 void
 enableLPUARTpins(void)
@@ -1097,72 +1070,6 @@ warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerSta
 	}
 }
 
-
-/*
-void
-printPinDirections(void)
-{
-	warpPrint("I2C0_SDA:%d\n", GPIO_DRV_GetPinDir(kWarpPinI2C0_SDA_UART_RX));
-	OSA_TimeDelay(100);
-	warpPrint("I2C0_SCL:%d\n", GPIO_DRV_GetPinDir(kWarpPinI2C0_SCL_UART_TX));
-	OSA_TimeDelay(100);
-	warpPrint("SPI_MOSI:%d\n", GPIO_DRV_GetPinDir(kWarpPinSPI_MOSI_UART_CTS));
-	OSA_TimeDelay(100);
-	warpPrint("SPI_MISO:%d\n", GPIO_DRV_GetPinDir(kWarpPinSPI_MISO_UART_RTS));
-	OSA_TimeDelay(100);
-	warpPrint("SPI_SCK_I2C_PULLUP_EN:%d\n", GPIO_DRV_GetPinDir(kWarpPinSPI_SCK_I2C_PULLUP_EN));
-	OSA_TimeDelay(100);
-	warpPrint("ADXL362_CS:%d\n", GPIO_DRV_GetPinDir(kWarpPinADXL362_CS));
-	OSA_TimeDelay(100);
-}
-*/
-
-
-
-void
-dumpProcessorState(void)
-{
-	uint32_t	cpuClockFrequency;
-
-	CLOCK_SYS_GetFreq(kCoreClock, &cpuClockFrequency);
-	warpPrint("\r\n\n\tCPU @ %u KHz\n", (cpuClockFrequency / 1000));
-	warpPrint("\r\tCPU power mode: %u\n", POWER_SYS_GetCurrentMode());
-	warpPrint("\r\tCPU clock manager configuration: %u\n", CLOCK_SYS_GetCurrentConfiguration());
-	warpPrint("\r\tRTC clock: %d\n", CLOCK_SYS_GetRtcGateCmd(0));
-	warpPrint("\r\tSPI clock: %d\n", CLOCK_SYS_GetSpiGateCmd(0));
-	warpPrint("\r\tI2C clock: %d\n", CLOCK_SYS_GetI2cGateCmd(0));
-	warpPrint("\r\tLPUART clock: %d\n", CLOCK_SYS_GetLpuartGateCmd(0));
-	warpPrint("\r\tPORT A clock: %d\n", CLOCK_SYS_GetPortGateCmd(0));
-	warpPrint("\r\tPORT B clock: %d\n", CLOCK_SYS_GetPortGateCmd(1));
-	warpPrint("\r\tFTF clock: %d\n", CLOCK_SYS_GetFtfGateCmd(0));
-	warpPrint("\r\tADC clock: %d\n", CLOCK_SYS_GetAdcGateCmd(0));
-	warpPrint("\r\tCMP clock: %d\n", CLOCK_SYS_GetCmpGateCmd(0));
-	warpPrint("\r\tVREF clock: %d\n", CLOCK_SYS_GetVrefGateCmd(0));
-	warpPrint("\r\tTPM clock: %d\n", CLOCK_SYS_GetTpmGateCmd(0));
-}
-
-
-void
-printBootSplash(uint16_t gWarpCurrentSupplyVoltage, uint8_t menuRegisterAddress, WarpPowerManagerCallbackStructure *  powerManagerCallbackStructure)
-{
-	/*
-	 *	We break up the prints with small delays to allow us to use small RTT print
-	 *	buffers without overrunning them when at max CPU speed.
-	 */
-	warpPrint("\r\n\n\n\n[ *\t\t\t\tWarp (HW revision C) / Glaux (HW revision B)\t\t\t* ]\n");
-	warpPrint("\r[  \t\t\t\t      Cambridge / Physcomplab   \t\t\t\t  ]\n\n");
-	warpPrint("\r\tSupply=%dmV,\tDefault Target Read Register=0x%02x\n",
-			gWarpCurrentSupplyVoltage, menuRegisterAddress);
-	warpPrint("\r\tI2C=%dkb/s,\tSPI=%dkb/s,\tUART=%db/s,\tI2C Pull-Up=%d\n\n",
-			gWarpI2cBaudRateKbps, gWarpSpiBaudRateKbps, gWarpUartBaudRateBps);
-	warpPrint("\r\tSIM->SCGC6=0x%02x\t\tRTC->SR=0x%02x\t\tRTC->TSR=0x%02x\n", SIM->SCGC6, RTC->SR, RTC->TSR);
-	warpPrint("\r\tMCG_C1=0x%02x\t\t\tMCG_C2=0x%02x\t\tMCG_S=0x%02x\n", MCG_C1, MCG_C2, MCG_S);
-	warpPrint("\r\tMCG_SC=0x%02x\t\t\tMCG_MC=0x%02x\t\tOSC_CR=0x%02x\n", MCG_SC, MCG_MC, OSC_CR);
-	warpPrint("\r\tSMC_PMPROT=0x%02x\t\t\tSMC_PMCTRL=0x%02x\t\tSCB->SCR=0x%02x\n", SMC_PMPROT, SMC_PMCTRL, SCB->SCR);
-	warpPrint("\r\tPMC_REGSC=0x%02x\t\t\tSIM_SCGC4=0x%02x\tRTC->TPR=0x%02x\n\n", PMC_REGSC, SIM_SCGC4, RTC->TPR);
-	warpPrint("\r\t%ds in RTC Handler to-date,\t%d Pmgr Errors\n", gWarpSleeptimeSeconds, powerManagerCallbackStructure->errorCount);
-}
-
 void
 blinkLED(int pin)
 {
@@ -1373,10 +1280,6 @@ int
 main(void)
 {
 	WarpStatus				status;
-	uint8_t					key;
-	WarpSensorDevice			menuTargetSensor		= kWarpSensorBMX055accel;
-	volatile WarpI2CDeviceState *		menuI2cDevice			= NULL;
-	uint8_t					menuRegisterAddress		= 0x00;
 	rtc_datetime_t				warpBootDate;
 	power_manager_user_config_t		warpPowerModeWaitConfig;
 	power_manager_user_config_t		warpPowerModeStopConfig;
@@ -1873,4 +1776,6 @@ devSSD1331init();
 #endif
 
 falldetectorMMA8451Q();
+
+return 0;
 }
